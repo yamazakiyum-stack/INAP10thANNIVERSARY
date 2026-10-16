@@ -269,7 +269,7 @@
       <div style="border: 1px solid rgba(200,162,76,.3); display: flex; flex-direction: column;">
         <div style="padding: 12px 18px; font-family: 'Marcellus', serif; font-size: 11px; letter-spacing: 0.28em; color: #C8A24C; text-transform: uppercase; border-bottom: 1px solid rgba(200,162,76,.2);">Step 01 — To 1F Elevator</div>
         <div style="background: #000; display: flex; justify-content: center;">
-          <video src="assets/route-1f.mp4" autoplay="" muted="" loop="" playsinline="" controls="" preload="metadata" style="width: 372px; max-height: 480px; height: 271px; display: block; object-fit: contain"></video>
+          <video src="assets/route-1f.mp4#t=0.1" muted="{{ true }}" playsInline="{{ true }}" controls="{{ true }}" preload="metadata" style="width: 459px; max-height: 480px; height: 343px; display: block; object-fit: contain"></video>
         </div>
         <div style="padding: 20px 22px 24px;">
           <div style="display: flex; align-items: baseline; gap: 12px;">
@@ -282,7 +282,7 @@
       <div style="border: 1px solid rgba(200,162,76,.3); display: flex; flex-direction: column;">
         <div style="padding: 12px 18px; font-family: 'Marcellus', serif; font-size: 11px; letter-spacing: 0.28em; color: #C8A24C; text-transform: uppercase; border-bottom: 1px solid rgba(200,162,76,.2);">Step 02 — 17F to SPACE EAST</div>
         <div style="background: #000; display: flex; justify-content: center;">
-          <video src="assets/route-17f.mp4" autoplay="" muted="" loop="" playsinline="" controls="" preload="metadata" style="width: 327px; max-height: 480px; height: 274px; display: block; object-fit: contain"></video>
+          <video src="assets/route-17f.mp4#t=0.1" muted="{{ true }}" playsInline="{{ true }}" controls="{{ true }}" preload="metadata" style="width: 436px; max-height: 480px; height: 344px; display: block; object-fit: contain"></video>
         </div>
         <div style="padding: 20px 22px 24px;">
           <div style="display: flex; align-items: baseline; gap: 12px;">
@@ -298,7 +298,7 @@
     <div style="margin-top: 24px; border: 1px solid rgba(200,162,76,.3);">
       <div style="padding: 12px 18px; font-family: 'Marcellus', serif; font-size: 30px; letter-spacing: 0.28em; color: #C8A24C; text-transform: uppercase; border-bottom: 1px solid rgba(200,162,76,.2); text-align: center">Welcome Signage</div>
       <div style="background: #000;">
-        <video src="assets/signage.mp4" autoplay="" muted="" loop="" playsinline="" preload="metadata" style="width: 100%; height: auto; display: block; aspect-ratio: 756 / 224; object-fit: cover;"></video>
+        <video data-lazy-play="1" src="assets/signage.mp4" muted="{{ true }}" loop="{{ true }}" playsInline="{{ true }}" preload="none" style="width: 100%; height: auto; display: block; aspect-ratio: 756 / 224; object-fit: cover;"></video>
       </div>
       <div style="padding: 18px 22px; text-align: center; font-family: 'Shippori Mincho','Hiragino Mincho ProN','Yu Mincho',serif; font-size: 14px; color: #a89f88; line-height: 2;">この「Welcome」のサイネージが目印です。見えたら、もう会場はすぐそこ。</div>
     </div>
@@ -351,13 +351,34 @@ class Component extends DCLogic {
   state = { introVisible: true };
 
   componentDidMount() {
+    setTimeout(() => this.setupLazyVideos(), 300);
     this._t = setTimeout(() => this.setState({ introVisible: false }), 4300);
     this.renderQR();
   }
   componentDidUpdate(prevProps) {
     if (prevProps.rsvpUrl !== this.props.rsvpUrl) this.renderQR();
   }
-  componentWillUnmount() { clearTimeout(this._t); }
+  setupLazyVideos() {
+    document.querySelectorAll('video').forEach((v) => {
+      v.muted = true; v.playsInline = true;
+      if (v.dataset.lazyPlay) v.loop = true; else v.controls = true;
+    });
+    if (this._io || typeof IntersectionObserver === 'undefined') return;
+    this._io = new IntersectionObserver((entries) => {
+      entries.forEach((en) => {
+        const v = en.target;
+        if (en.isIntersecting) { v.preload = 'auto'; const p = v.play(); if (p && p.catch) p.catch(() => {}); }
+        else v.pause();
+      });
+    }, { threshold: 0.25 });
+    document.querySelectorAll('video[data-lazy-play]').forEach((v) => this._io.observe(v));
+    // pause other route videos when one starts
+    document.querySelectorAll('video[controls]').forEach((v) => v.addEventListener('play', () => {
+      document.querySelectorAll('video[controls]').forEach((o) => { if (o !== v) o.pause(); });
+    }));
+  }
+  componentWillUnmount() {
+    if (this._io) this._io.disconnect(); clearTimeout(this._t); }
 
   renderQR() {
     const url = this.props.rsvpUrl || 'https://docs.google.com/forms/d/e/1FAIpQLScRtRxRbvTAUWVgmKuUdN09xqz1INWPpUjScf_NZLc6Oe_Buw/viewform';
