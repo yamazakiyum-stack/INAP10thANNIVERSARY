@@ -45,7 +45,7 @@
 </style>
 </helmet>
 
-<div style="background: radial-gradient(120% 50% at 50% -5%, #17130a 0%, #070707 45%); color: #EDE7D6; font-family: 'Zen Kaku Gothic New','Hiragino Sans','Yu Gothic',sans-serif; padding: 0 0 70px; position: relative; overflow: hidden;">
+<div style="background: radial-gradient(120% 50% at 50% -5%, #17130a 0%, #070707 45%); color: #EDE7D6; font-family: 'Zen Kaku Gothic New','Hiragino Sans','Yu Gothic',sans-serif; padding: 0 0 70px; position: relative; overflow: hidden; width: 100%;">
 
 
   <!-- ================= CINEMATIC INTRO ================= -->
@@ -298,6 +298,30 @@
     
   </section>
 
+  <!-- ================= SEATING ================= -->
+  <section style="max-width: 1040px; margin: 64px auto 0; padding: 0 clamp(18px,5vw,32px);">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="font-family: 'Marcellus', serif; font-size: 13px; letter-spacing: 0.4em; color: #C8A24C; text-transform: uppercase;">Seating</div>
+      <div style="font-family: 'Shippori Mincho','Hiragino Mincho ProN','Yu Mincho',serif; font-size: clamp(18px, 3.8vw, 22px); margin-top: 10px;">お席のご案内</div>
+      <div style="font-family: 'Shippori Mincho','Hiragino Mincho ProN','Yu Mincho',serif; font-size: 14px; color: #a89f88; margin-top: 12px; line-height: 2;">テーブルの目印は、かわいい仲間たち。<br>お名前を入力すると、あなたのお席が光ります。</div>
+    </div>
+    <div style="border: 1px solid rgba(200,162,76,.28); padding: 2px;">
+      <div style="border: 1px solid rgba(200,162,76,.16); padding: clamp(20px,4vw,32px); background: linear-gradient(160deg,rgba(200,162,76,.05),transparent);">
+        <div style="display: flex; justify-content: center;">
+          <input value="{{ seatQuery }}" onInput="{{ onSeatInput }}" placeholder="お名前（例：佐藤）" style="width: 100%; max-width: 360px; background: rgba(0,0,0,.35); border: 1px solid rgba(200,162,76,.45); border-radius: 2px; color: #EDE7D6; font-family: 'Shippori Mincho','Hiragino Mincho ProN','Yu Mincho',serif; font-size: 16px; padding: 12px 16px; outline: none; text-align: center;" style-focus="border-color: #E4CE8F;">
+        </div>
+        <div style="text-align: center; font-family: 'Shippori Mincho','Hiragino Mincho ProN','Yu Mincho',serif; font-size: 14px; color: #cfc6b0; margin-top: 14px; min-height: 28px; line-height: 2;">{{ seatMessage }}</div>
+        <div style="position: relative; max-width: 760px; margin: 14px auto 0; border-radius: 2px; overflow: hidden; background: #fff;">
+          <img src="assets/seating.png" alt="当日の席次表" style="width: 100%; height: auto; display: block;">
+          <sc-if value="{{ seatHasMatch }}" hint-placeholder-val="{{ false }}">
+            <div style="position: absolute; left: {{ seatLeft }}; top: {{ seatTop }}; width: 19%; aspect-ratio: 1; transform: translate(-50%,-50%); border-radius: 50%; border: 3px solid #F39800; box-shadow: 0 0 0 6px rgba(243,152,0,.25), 0 0 30px rgba(243,152,0,.6); pointer-events: none;"></div>
+          </sc-if>
+        </div>
+        <div style="text-align: center; font-family: 'Shippori Mincho','Hiragino Mincho ProN','Yu Mincho',serif; font-size: 13px; color: #6d685c; margin-top: 16px; line-height: 1.9;">当日は会場入口でもご案内いたします。ご不明な点は幹事会までお気軽にお声がけください。</div>
+      </div>
+    </div>
+  </section>
+
   <!-- ================= AFTER PARTY ================= -->
   <section style="max-width: 1040px; margin: 64px auto 0; padding: 0 clamp(18px,5vw,32px);">
     <div style="text-align: center; margin-bottom: 30px;">
@@ -386,7 +410,31 @@ class Component extends DCLogic {
     draw();
   }
 
+  static SEATS = [
+    { x: 44, y: 29, names: ['清水','中平','大野','新山冬','牧','鈴木'] },
+    { x: 58, y: 39, names: ['佐久間','猿渡','中村','宮崎','平岡'] },
+    { x: 74, y: 28, names: ['高橋桂子','菅原','岩井','竹下','川島'] },
+    { x: 44, y: 50, names: ['木村','黒澤','吉村','鶴本'] },
+    { x: 74, y: 50, names: ['佐藤','林','高橋昇太','福島','坂本'] },
+    { x: 59, y: 61, names: ['山崎','新宅','対馬','湯浅'] },
+    { x: 44, y: 73, names: ['鶴本瑛子','鶴本大登','鶴本みのり','川島祐子','川島智美','川島来昊'] },
+    { x: 74, y: 73, names: ['上鶴','三窪','張','小幡','白柿'] },
+  ];
+  seatLookup() {
+    const q = (this.state.seatQuery || '').replace(/\s|　|さん|様/g, '');
+    if (!q) return { msg: '', table: null };
+    const T = Component.SEATS;
+    let hit = null, name = null;
+    for (const t of T) { const n = t.names.find((x) => x === q); if (n) { hit = t; name = n; break; } }
+    if (!hit) for (const t of T) { const n = t.names.find((x) => x.startsWith(q) || x.includes(q)); if (n) { hit = t; name = n; break; } }
+    const multi = T.reduce((c, t) => c + t.names.filter((x) => x.includes(q)).length, 0);
+    if (!hit) return { msg: '該当するお名前が見つかりませんでした。フルネームでもお試しください。', table: null };
+    const mates = hit.names.filter((x) => x !== name).join('・');
+    const note = multi > 1 ? '（同じ文字を含む方が複数います。フルネームで絞り込めます）' : '';
+    return { msg: `${name}さんのお席はこちら ✦ ご一緒は ${mates} さん${note}`, table: hit };
+  }
   renderVals() {
+    const seat = this.seatLookup();
     const target = new Date(2026, 9, 23);
     const now = new Date();
     const days = Math.max(0, Math.round((target - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000));
@@ -396,6 +444,12 @@ class Component extends DCLogic {
       skipIntro: () => { clearTimeout(this._t); this.setState({ introVisible: false }); },
       rsvpUrl: this.props.rsvpUrl || 'https://docs.google.com/forms/d/e/1FAIpQLScRtRxRbvTAUWVgmKuUdN09xqz1INWPpUjScf_NZLc6Oe_Buw/viewform',
       driveUrl: this.props.driveUrl || 'https://photos.app.goo.gl/YVeywrzdjAUqne2J8',
+      seatQuery: this.state.seatQuery || '',
+      onSeatInput: (e) => this.setState({ seatQuery: e.target.value }),
+      seatMessage: seat.msg,
+      seatHasMatch: !!seat.table,
+      seatLeft: seat.table ? seat.table.x + '%' : '0',
+      seatTop: seat.table ? seat.table.y + '%' : '0',
       openAfterMap: (e) => {
         e.preventDefault();
         window.open('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent('グレースバリ 新宿本店 歌舞伎町1-3-16'), '_blank', 'noopener,noreferrer');
